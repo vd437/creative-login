@@ -144,6 +144,17 @@ All colors MUST be HSL.
     }
   }
 
+  @keyframes slideOutRight {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+  }
+
   @keyframes pulse-dot {
     0%, 100% {
       transform: scale(1);

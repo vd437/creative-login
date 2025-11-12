@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, RotateCw } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 const Verify = () => {
@@ -13,6 +13,7 @@ const Verify = () => {
   const [timer, setTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<"idle" | "success" | "error">("idle");
+  const [isClearing, setIsClearing] = useState(false);
 
   useEffect(() => {
     if (timer > 0) {
@@ -37,10 +38,12 @@ const Verify = () => {
           }, 1500);
         } else {
           setVerificationStatus("error");
+          setIsClearing(true);
           setTimeout(() => {
             setCode("");
             setVerificationStatus("idle");
-          }, 1500);
+            setIsClearing(false);
+          }, 800);
         }
       }, 500);
     }
@@ -59,6 +62,15 @@ const Verify = () => {
     if (verificationStatus === "success") return "border-success";
     if (verificationStatus === "error") return "border-destructive";
     return "";
+  };
+
+  const getSlotClassName = (index: number) => {
+    const baseClass = `h-14 w-12 text-lg ${getBorderColor()}`;
+    if (isClearing && verificationStatus === "error") {
+      const delay = (5 - index) * 100;
+      return `${baseClass} animate-[slideOutRight_0.3s_ease-out_${delay}ms_forwards]`;
+    }
+    return baseClass;
   };
 
   return (
@@ -90,14 +102,15 @@ const Verify = () => {
                 value={code}
                 onChange={setCode}
                 className={getBorderColor()}
+                disabled={isClearing}
               >
                 <InputOTPGroup>
-                  <InputOTPSlot index={0} className={`h-14 w-12 text-lg ${getBorderColor()}`} />
-                  <InputOTPSlot index={1} className={`h-14 w-12 text-lg ${getBorderColor()}`} />
-                  <InputOTPSlot index={2} className={`h-14 w-12 text-lg ${getBorderColor()}`} />
-                  <InputOTPSlot index={3} className={`h-14 w-12 text-lg ${getBorderColor()}`} />
-                  <InputOTPSlot index={4} className={`h-14 w-12 text-lg ${getBorderColor()}`} />
-                  <InputOTPSlot index={5} className={`h-14 w-12 text-lg ${getBorderColor()}`} />
+                  <InputOTPSlot index={0} className={getSlotClassName(0)} />
+                  <InputOTPSlot index={1} className={getSlotClassName(1)} />
+                  <InputOTPSlot index={2} className={getSlotClassName(2)} />
+                  <InputOTPSlot index={3} className={getSlotClassName(3)} />
+                  <InputOTPSlot index={4} className={getSlotClassName(4)} />
+                  <InputOTPSlot index={5} className={getSlotClassName(5)} />
                 </InputOTPGroup>
               </InputOTP>
             </div>
@@ -130,6 +143,7 @@ const Verify = () => {
                 onClick={handleResend}
                 className="text-sm"
               >
+                <RotateCw className="w-4 h-4 mr-2" />
                 Resend code
               </Button>
             )}
