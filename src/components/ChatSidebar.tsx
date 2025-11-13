@@ -212,16 +212,16 @@ export const ChatSidebar = ({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[380px] rounded-3xl">
-          <h2 className="text-lg font-semibold mb-2">Delete Conversation?</h2>
-          <p className="text-sm text-muted-foreground mb-4">
+        <DialogContent className="sm:max-w-[280px] rounded-3xl">
+          <h2 className="text-base font-semibold mb-2">Delete Conversation?</h2>
+          <p className="text-xs text-muted-foreground mb-4">
             This action cannot be undone. This will permanently delete this conversation.
           </p>
           <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button variant="outline" size="sm" onClick={() => setDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>
+            <Button variant="destructive" size="sm" onClick={handleDeleteConfirm}>
               Delete
             </Button>
           </div>

@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { 
   Menu, 
   Plus, 
-  Send, 
+  SendHorizontal, 
   Image as ImageIcon, 
   FileText, 
   Camera, 
@@ -27,7 +27,8 @@ import {
   Code,
   Sparkles,
   MessageSquare,
-  Book
+  Book,
+  Brain
 } from "lucide-react";
 import { ChatSidebar } from "@/components/ChatSidebar";
 
@@ -46,13 +47,13 @@ interface Conversation {
 }
 
 const suggestions = [
-  { icon: Palette, title: "Create painting", subtitle: "Renaissance-style" },
-  { icon: FileEdit, title: "Write report", subtitle: "from data" },
-  { icon: Link2, title: "Summarize article", subtitle: "from URL" },
-  { icon: Code, title: "Generate code", subtitle: "any language" },
-  { icon: Sparkles, title: "Brainstorm ideas", subtitle: "creative solutions" },
-  { icon: MessageSquare, title: "Draft message", subtitle: "professional tone" },
-  { icon: Book, title: "Explain concept", subtitle: "simple terms" },
+  { icon: Palette, title: "Create painting", subtitle: "Renaissance-style", color: "text-purple-500" },
+  { icon: FileEdit, title: "Write report", subtitle: "from data", color: "text-blue-500" },
+  { icon: Link2, title: "Summarize article", subtitle: "from URL", color: "text-green-500" },
+  { icon: Code, title: "Generate code", subtitle: "any language", color: "text-orange-500" },
+  { icon: Sparkles, title: "Brainstorm ideas", subtitle: "creative solutions", color: "text-pink-500" },
+  { icon: MessageSquare, title: "Draft message", subtitle: "professional tone", color: "text-cyan-500" },
+  { icon: Book, title: "Explain concept", subtitle: "simple terms", color: "text-indigo-500" },
 ];
 
 const Chat = () => {
@@ -73,6 +74,8 @@ const Chat = () => {
   const [animatedText, setAnimatedText] = useState("");
   const [isTyping, setIsTyping] = useState(true);
   const [uploadedFiles, setUploadedFiles] = useState<{ type: "image" | "file"; name: string; url: string }[]>([]);
+  const [searchMode, setSearchMode] = useState(false);
+  const [deepThinkMode, setDeepThinkMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,14 +85,12 @@ const Chat = () => {
   // Animated text cycling
   useEffect(() => {
     const words = [...suggestions.map(s => s.title), "Beja"];
-    let charIndex = 0;
     const currentText = words[currentWord];
 
     if (isTyping) {
-      if (charIndex < currentText.length) {
+      if (animatedText.length < currentText.length) {
         const timeout = setTimeout(() => {
-          setAnimatedText(currentText.slice(0, charIndex + 1));
-          charIndex++;
+          setAnimatedText(currentText.slice(0, animatedText.length + 1));
         }, 100);
         return () => clearTimeout(timeout);
       } else {
@@ -106,7 +107,7 @@ const Chat = () => {
       }, 500);
       return () => clearTimeout(timeout);
     }
-  }, [currentWord, isTyping, animatedText]);
+  }, [currentWord, isTyping, animatedText, suggestions]);
 
   const handleSendMessage = () => {
     if (!message.trim() && uploadedFiles.length === 0) return;
@@ -196,19 +197,19 @@ const Chat = () => {
                 </h2>
               </div>
 
-              <div className="w-full max-w-2xl space-y-3">
+              <div className="w-full max-w-2xl space-y-2">
                 {visibleSuggestions.map((suggestion, index) => (
                   <button
                     key={index}
                     onClick={() => setMessage(suggestion.title)}
-                    className="w-full flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:bg-accent/50 transition-colors text-left"
+                    className="w-full flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-accent/50 transition-colors text-left"
                   >
-                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-                      <suggestion.icon className="h-5 w-5 text-primary" />
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
+                      <suggestion.icon className={`h-4 w-4 ${suggestion.color}`} />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-foreground">{suggestion.title}</p>
-                      <p className="text-sm text-muted-foreground">{suggestion.subtitle}</p>
+                      <p className="font-medium text-sm text-foreground">{suggestion.title}</p>
+                      <p className="text-xs text-muted-foreground">{suggestion.subtitle}</p>
                     </div>
                   </button>
                 ))}
@@ -216,6 +217,7 @@ const Chat = () => {
                 {!showAllSuggestions && suggestions.length > 4 && (
                   <Button
                     variant="outline"
+                    size="sm"
                     className="w-full"
                     onClick={() => setShowAllSuggestions(true)}
                   >
@@ -226,10 +228,11 @@ const Chat = () => {
                 {showAllSuggestions && (
                   <Button
                     variant="outline"
+                    size="sm"
                     className="w-full"
                     onClick={() => setShowAllSuggestions(false)}
                   >
-                    Close
+                    Close Suggestions
                   </Button>
                 )}
               </div>
@@ -284,8 +287,8 @@ const Chat = () => {
         {/* Uploaded Files Preview */}
         {uploadedFiles.length > 0 && (
           <div className="px-4 py-2 border-t">
-            <ScrollArea className="max-h-24">
-              <div className="flex gap-2">
+            <div className="overflow-x-auto">
+              <div className="flex gap-2 pb-2">
                 {uploadedFiles.map((file, idx) => (
                   <div
                     key={idx}
@@ -293,7 +296,7 @@ const Chat = () => {
                   >
                     <button
                       onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== idx))}
-                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 z-10"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -304,73 +307,121 @@ const Chat = () => {
                         className="w-16 h-16 object-cover rounded"
                       />
                     ) : (
-                      <div className="flex items-center gap-2 w-32 p-2">
+                      <div className="flex flex-col items-center justify-center w-16 h-16 gap-1">
                         <FileText className="h-6 w-6" />
-                        <span className="text-xs truncate">{file.name}</span>
+                        <span className="text-[10px] truncate w-full text-center">{file.name}</span>
                       </div>
                     )}
                   </div>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
           </div>
         )}
 
         {/* Input Area */}
         <div className="p-4 border-t">
-          <div className="flex items-end gap-2 max-w-4xl mx-auto">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="flex-shrink-0"
-              onClick={() => setUploadMenuOpen(true)}
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
+          <div className="flex flex-col gap-2 max-w-4xl mx-auto">
+            {/* Mode indicators */}
+            {(searchMode || deepThinkMode) && (
+              <div className="flex items-center gap-2 px-2">
+                {searchMode && (
+                  <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-full text-sm">
+                    <Search className="h-3.5 w-3.5" />
+                    <span>Search</span>
+                    <button onClick={() => setSearchMode(false)}>
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+                {deepThinkMode && (
+                  <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-full text-sm">
+                    <Brain className="h-3.5 w-3.5" />
+                    <span>Deep Think</span>
+                    <button onClick={() => setDeepThinkMode(false)}>
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <div className="flex items-end gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="flex-shrink-0"
+                onClick={() => setUploadMenuOpen(true)}
+              >
+                <Plus className="h-5 w-5" />
+              </Button>
 
-            <Input
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-              placeholder="Ask Beja"
-              className="flex-1 rounded-full border-none bg-muted"
-            />
+              <Textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+                placeholder="Ask Beja"
+                className="flex-1 rounded-3xl border-none bg-background resize-none min-h-[44px] max-h-32"
+                rows={1}
+              />
 
-            <Button
-              size="icon"
-              className="flex-shrink-0 rounded-full"
-              onClick={handleSendMessage}
-            >
-              <Send className="h-5 w-5" />
-            </Button>
+              <Button
+                size="icon"
+                className="flex-shrink-0 rounded-full"
+                onClick={handleSendMessage}
+                disabled={!message.trim() && uploadedFiles.length === 0}
+              >
+                <SendHorizontal className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Upload Menu Dialog */}
       <Dialog open={uploadMenuOpen} onOpenChange={setUploadMenuOpen}>
-        <DialogContent className="sm:max-w-[320px] rounded-3xl">
-          <div className="space-y-2">
+        <DialogContent className="sm:max-w-[280px] rounded-3xl">
+          <div className="space-y-1">
             <button
               onClick={() => handleFileUpload("image")}
-              className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-accent transition-colors"
+              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-accent transition-colors"
             >
-              <ImageIcon className="h-5 w-5" />
-              <span>Upload Image</span>
+              <ImageIcon className="h-4 w-4" />
+              <span className="text-sm">Upload Image</span>
             </button>
             <button
               onClick={() => handleFileUpload("file")}
-              className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-accent transition-colors"
+              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-accent transition-colors"
             >
-              <FileText className="h-5 w-5" />
-              <span>Upload File</span>
+              <FileText className="h-4 w-4" />
+              <span className="text-sm">Upload File</span>
             </button>
             <button
               onClick={() => setUploadMenuOpen(false)}
-              className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-accent transition-colors"
+              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-accent transition-colors"
             >
-              <Camera className="h-5 w-5" />
-              <span>Take Picture</span>
+              <Camera className="h-4 w-4" />
+              <span className="text-sm">Take Picture</span>
+            </button>
+            <button
+              onClick={() => {
+                setSearchMode(true);
+                setUploadMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-accent transition-colors"
+            >
+              <Search className="h-4 w-4" />
+              <span className="text-sm">Search</span>
+            </button>
+            <button
+              onClick={() => {
+                setDeepThinkMode(true);
+                setUploadMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-accent transition-colors"
+            >
+              <Brain className="h-4 w-4" />
+              <span className="text-sm">Deep Think</span>
             </button>
           </div>
         </DialogContent>
@@ -378,44 +429,44 @@ const Chat = () => {
 
       {/* Top Menu Dialog */}
       <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
-        <DialogContent className="sm:max-w-[320px] rounded-3xl">
-          <div className="space-y-2">
+        <DialogContent className="sm:max-w-[280px] rounded-3xl">
+          <div className="space-y-1">
             <button
               disabled
-              className="w-full flex items-center gap-3 p-4 rounded-xl text-muted-foreground cursor-not-allowed opacity-50"
+              className="w-full flex items-center gap-3 p-3 rounded-xl text-muted-foreground cursor-not-allowed opacity-50"
             >
-              <MessageSquare className="h-5 w-5" />
-              <span>New Chat</span>
+              <MessageSquare className="h-4 w-4" />
+              <span className="text-sm">New Chat</span>
             </button>
             <button
               onClick={() => {
                 setMenuOpen(false);
                 setEditNameDialogOpen(true);
               }}
-              className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-accent transition-colors"
+              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-accent transition-colors"
             >
-              <Edit2 className="h-5 w-5" />
-              <span>Edit Chat Name</span>
+              <Edit2 className="h-4 w-4" />
+              <span className="text-sm">Edit Chat Name</span>
             </button>
             <button
               onClick={() => {
                 setMenuOpen(false);
                 setDeleteDialogOpen(true);
               }}
-              className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-destructive/10 text-destructive transition-colors"
+              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-destructive/10 text-destructive transition-colors"
             >
-              <Trash2 className="h-5 w-5" />
-              <span>Delete Conversation</span>
+              <Trash2 className="h-4 w-4" />
+              <span className="text-sm">Delete Conversation</span>
             </button>
             <button
               onClick={() => {
                 setMenuOpen(false);
                 setReportDialogOpen(true);
               }}
-              className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-accent transition-colors"
+              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-accent transition-colors"
             >
-              <Flag className="h-5 w-5" />
-              <span>Report Conversation</span>
+              <Flag className="h-4 w-4" />
+              <span className="text-sm">Report Conversation</span>
             </button>
           </div>
         </DialogContent>
@@ -455,18 +506,18 @@ const Chat = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[380px] rounded-3xl">
+        <DialogContent className="sm:max-w-[280px] rounded-3xl">
           <DialogHeader>
-            <DialogTitle>Delete Conversation?</DialogTitle>
+            <DialogTitle className="text-base">Delete Conversation?</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             This action cannot be undone. This will permanently delete this conversation.
           </p>
           <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button variant="outline" size="sm" onClick={() => setDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteConversation}>
+            <Button variant="destructive" size="sm" onClick={handleDeleteConversation}>
               Delete
             </Button>
           </div>
@@ -475,19 +526,20 @@ const Chat = () => {
 
       {/* Edit Name Dialog */}
       <Dialog open={editNameDialogOpen} onOpenChange={setEditNameDialogOpen}>
-        <DialogContent className="sm:max-w-[380px] rounded-3xl">
+        <DialogContent className="sm:max-w-[280px] rounded-3xl">
           <DialogHeader>
-            <DialogTitle>Edit Chat Name</DialogTitle>
+            <DialogTitle className="text-base">Edit Chat Name</DialogTitle>
           </DialogHeader>
           <Input
             defaultValue={currentConversation?.name}
             placeholder="Enter chat name"
+            className="text-sm"
           />
           <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setEditNameDialogOpen(false)}>
+            <Button variant="outline" size="sm" onClick={() => setEditNameDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => setEditNameDialogOpen(false)}>
+            <Button size="sm" onClick={() => setEditNameDialogOpen(false)}>
               Save
             </Button>
           </div>
