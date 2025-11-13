@@ -65,7 +65,7 @@ const Setup = () => {
     }
     // TODO: Implement account setup
     console.log("Setup complete:", { username, password });
-    navigate("/dashboard");
+    navigate("/chat");
   };
 
   const getStrengthColor = () => {
