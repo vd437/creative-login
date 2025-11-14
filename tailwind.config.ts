@@ -61,6 +61,15 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        suggestion: {
+          1: "hsl(var(--suggestion-1))",
+          2: "hsl(var(--suggestion-2))",
+          3: "hsl(var(--suggestion-3))",
+          4: "hsl(var(--suggestion-4))",
+          5: "hsl(var(--suggestion-5))",
+          6: "hsl(var(--suggestion-6))",
+          7: "hsl(var(--suggestion-7))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
