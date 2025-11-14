@@ -47,13 +47,13 @@ interface Conversation {
 }
 
 const suggestions = [
-  { icon: Palette, title: "Create painting", subtitle: "Renaissance-style", color: "text-purple-500" },
-  { icon: FileEdit, title: "Write report", subtitle: "from data", color: "text-blue-500" },
-  { icon: Link2, title: "Summarize article", subtitle: "from URL", color: "text-green-500" },
-  { icon: Code, title: "Generate code", subtitle: "any language", color: "text-orange-500" },
-  { icon: Sparkles, title: "Brainstorm ideas", subtitle: "creative solutions", color: "text-pink-500" },
-  { icon: MessageSquare, title: "Draft message", subtitle: "professional tone", color: "text-cyan-500" },
-  { icon: Book, title: "Explain concept", subtitle: "simple terms", color: "text-indigo-500" },
+  { icon: Palette, title: "Create painting", subtitle: "Renaissance-style", color: "text-suggestion-1" },
+  { icon: FileEdit, title: "Write report", subtitle: "from data", color: "text-suggestion-2" },
+  { icon: Link2, title: "Summarize article", subtitle: "from URL", color: "text-suggestion-3" },
+  { icon: Code, title: "Generate code", subtitle: "any language", color: "text-suggestion-4" },
+  { icon: Sparkles, title: "Brainstorm ideas", subtitle: "creative solutions", color: "text-suggestion-5" },
+  { icon: MessageSquare, title: "Draft message", subtitle: "professional tone", color: "text-suggestion-6" },
+  { icon: Book, title: "Explain concept", subtitle: "simple terms", color: "text-suggestion-7" },
 ];
 
 const Chat = () => {
