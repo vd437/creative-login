@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,6 +14,8 @@ import {
   Settings,
   LogOut,
   Check,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 interface Conversation {
@@ -30,6 +33,8 @@ interface ChatSidebarProps {
   onSelectConversation: (id: string) => void;
   onUpdateConversations: (conversations: Conversation[]) => void;
   onLogout: () => void;
+  theme: "light" | "dark";
+  onThemeChange: (theme: "light" | "dark") => void;
 }
 
 export const ChatSidebar = ({
@@ -40,7 +45,10 @@ export const ChatSidebar = ({
   onSelectConversation,
   onUpdateConversations,
   onLogout,
+  theme,
+  onThemeChange,
 }: ChatSidebarProps) => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -194,8 +202,33 @@ export const ChatSidebar = ({
         </ScrollArea>
 
         {/* Footer */}
-        <div className="p-4 border-t space-y-2">
-          <Button variant="ghost" className="w-full justify-start">
+        <div className="p-4 border-t space-y-3">
+          {/* Theme Toggle */}
+          <div className="flex items-center gap-0 rounded-lg border overflow-hidden bg-card">
+            <button
+              onClick={() => onThemeChange("light")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 transition-colors ${
+                theme === "light" ? "bg-primary text-primary-foreground" : "bg-card text-foreground"
+              }`}
+            >
+              <Sun className="h-4 w-4" />
+            </button>
+            <div className="w-px h-8 bg-border" />
+            <button
+              onClick={() => onThemeChange("dark")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 transition-colors ${
+                theme === "dark" ? "bg-primary text-primary-foreground" : "bg-card text-foreground"
+              }`}
+            >
+              <Moon className="h-4 w-4" />
+            </button>
+          </div>
+
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start"
+            onClick={() => navigate("/settings")}
+          >
             <Settings className="h-4 w-4 mr-2" />
             Settings
           </Button>

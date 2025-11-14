@@ -76,6 +76,7 @@ const Chat = () => {
   const [uploadedFiles, setUploadedFiles] = useState<{ type: "image" | "file"; name: string; url: string }[]>([]);
   const [searchMode, setSearchMode] = useState(false);
   const [deepThinkMode, setDeepThinkMode] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -161,16 +162,19 @@ const Chat = () => {
   const visibleSuggestions = showAllSuggestions ? suggestions : suggestions.slice(0, 4);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <ChatSidebar
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        conversations={conversations}
-        currentConversationId={currentConversationId}
-        onSelectConversation={setCurrentConversationId}
-        onUpdateConversations={setConversations}
-        onLogout={handleLogout}
-      />
+    <div className={`flex h-screen overflow-hidden ${theme === "dark" ? "dark" : ""}`}>
+      <div className="flex h-screen w-full bg-background">
+        <ChatSidebar
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          conversations={conversations}
+          currentConversationId={currentConversationId}
+          onSelectConversation={setCurrentConversationId}
+          onUpdateConversations={setConversations}
+          onLogout={handleLogout}
+          theme={theme}
+          onThemeChange={setTheme}
+        />
 
       <div className="flex-1 flex flex-col">
         {/* Header */}
@@ -546,20 +550,21 @@ const Chat = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Hidden file inputs */}
-      <input
-        ref={imageInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => handleFileChange(e, "image")}
-      />
-      <input
-        ref={fileInputRef}
-        type="file"
-        className="hidden"
-        onChange={(e) => handleFileChange(e, "file")}
-      />
+        {/* Hidden file inputs */}
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => handleFileChange(e, "image")}
+        />
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          onChange={(e) => handleFileChange(e, "file")}
+        />
+      </div>
     </div>
   );
 };
