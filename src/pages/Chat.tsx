@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Menu, 
   Plus, 
@@ -28,7 +31,13 @@ import {
   Sparkles,
   MessageSquare,
   Book,
-  Brain
+  Brain,
+  Copy,
+  RefreshCw,
+  ThumbsUp,
+  ThumbsDown,
+  Download,
+  Loader2
 } from "lucide-react";
 import { ChatSidebar } from "@/components/ChatSidebar";
 
@@ -58,6 +67,7 @@ const suggestions = [
 
 const Chat = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([
@@ -73,12 +83,15 @@ const Chat = () => {
   const [currentWord, setCurrentWord] = useState(0);
   const [animatedText, setAnimatedText] = useState("");
   const [isTyping, setIsTyping] = useState(true);
-  const [uploadedFiles, setUploadedFiles] = useState<{ type: "image" | "file"; name: string; url: string }[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<{ type: "image" | "file"; name: string; url: string; data?: string; mimeType?: string }[]>([]);
   const [searchMode, setSearchMode] = useState(false);
   const [deepThinkMode, setDeepThinkMode] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [isAIResponding, setIsAIResponding] = useState(false);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const currentConversation = conversations.find(c => c.id === currentConversationId);
   const hasMessages = currentConversation && currentConversation.messages.length > 0;
@@ -110,7 +123,7 @@ const Chat = () => {
     }
   }, [currentWord, isTyping, animatedText, suggestions]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!message.trim() && uploadedFiles.length === 0) return;
 
     const newMessage: Message = {
@@ -120,6 +133,9 @@ const Chat = () => {
       files: uploadedFiles.length > 0 ? uploadedFiles : undefined
     };
 
+    const userMessage = message;
+    const userFiles = uploadedFiles;
+
     setConversations(prev => prev.map(conv => 
       conv.id === currentConversationId 
         ? { ...conv, messages: [...conv.messages, newMessage] }
@@ -128,6 +144,87 @@ const Chat = () => {
 
     setMessage("");
     setUploadedFiles([]);
+    setIsAIResponding(true);
+
+    try {
+      // Prepare images for API if any
+      const images = userFiles
+        .filter(f => f.type === "image" && f.data)
+        .map(f => ({
+          data: f.data,
+          mimeType: f.mimeType
+        }));
+
+      const { data, error } = await supabase.functions.invoke('chat-ai', {
+        body: {
+          messages: [{ role: "user", content: userMessage }],
+          searchMode,
+          deepThinkMode,
+          images: images.length > 0 ? images : undefined
+        }
+      });
+
+      if (error) throw error;
+
+      // Parse streaming response
+      const reader = data.getReader();
+      const decoder = new TextDecoder();
+      let aiMessage = "";
+      let aiMessageId = Date.now().toString();
+
+      // Add empty AI message
+      setConversations(prev => prev.map(conv => 
+        conv.id === currentConversationId 
+          ? { ...conv, messages: [...conv.messages, { id: aiMessageId, role: "assistant", content: "" }] }
+          : conv
+      ));
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n').filter(line => line.trim());
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const jsonData = JSON.parse(line.slice(6));
+              const text = jsonData.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (text) {
+                aiMessage += text;
+                // Update AI message
+                setConversations(prev => prev.map(conv => {
+                  if (conv.id === currentConversationId) {
+                    return {
+                      ...conv,
+                      messages: conv.messages.map(msg =>
+                        msg.id === aiMessageId ? { ...msg, content: aiMessage } : msg
+                      )
+                    };
+                  }
+                  return conv;
+                }));
+              }
+            } catch (e) {
+              console.error('Error parsing chunk:', e);
+            }
+          }
+        }
+      }
+
+      setSearchMode(false);
+      setDeepThinkMode(false);
+    } catch (error) {
+      console.error('Error calling AI:', error);
+      toast({
+        title: "Error",
+        description: "Failed to get AI response. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAIResponding(false);
+    }
   };
 
   const handleFileUpload = (type: "image" | "file") => {
@@ -143,8 +240,44 @@ const Chat = () => {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
-      setUploadedFiles(prev => [...prev, { type, name: file.name, url }]);
+      
+      if (type === "image") {
+        // Convert image to base64 for API
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          const data = base64.split(',')[1]; // Remove data:image/xxx;base64, prefix
+          setUploadedFiles(prev => [...prev, { 
+            type, 
+            name: file.name, 
+            url,
+            data,
+            mimeType: file.type 
+          }]);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setUploadedFiles(prev => [...prev, { type, name: file.name, url }]);
+      }
     }
+  };
+
+  const handleCopyMessage = (content: string) => {
+    navigator.clipboard.writeText(content);
+    toast({ title: "Copied to clipboard" });
+  };
+
+  const handleRegenerateResponse = () => {
+    // TODO: Implement regeneration
+    toast({ title: "Regenerating response..." });
+  };
+
+  const handleLikeMessage = () => {
+    toast({ title: "Thank you for your feedback!" });
+  };
+
+  const handleDislikeMessage = () => {
+    toast({ title: "Thank you for your feedback!" });
   };
 
   const handleDeleteConversation = () => {
@@ -244,36 +377,37 @@ const Chat = () => {
           )}
 
           {hasMessages && (
-            <div className="space-y-4 py-4">
+            <div className="space-y-6 py-4">
               {currentConversation.messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"} gap-2`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                    className={`max-w-[80%] px-4 py-3 ${
                       msg.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
+                        ? "bg-transparent text-foreground"
+                        : "bg-transparent text-foreground"
                     }`}
                   >
-                    {msg.content && <p className="text-sm">{msg.content}</p>}
+                    {msg.content && <p className="text-sm whitespace-pre-wrap">{msg.content}</p>}
                     {msg.files && msg.files.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
                         {msg.files.map((file, idx) => (
                           <div
                             key={idx}
-                            className="relative rounded-lg overflow-hidden bg-background/20 p-2"
+                            className="relative rounded-lg overflow-hidden"
+                            onClick={() => file.type === "image" && setEnlargedImage(file.url)}
                           >
                             {file.type === "image" ? (
                               <img
                                 src={file.url}
                                 alt={file.name}
-                                className="w-20 h-20 object-cover rounded"
+                                className="w-32 h-32 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
                               />
                             ) : (
-                              <div className="flex items-center gap-2 p-2">
-                                <FileText className="h-8 w-8" />
+                              <div className="flex items-center gap-2 p-2 bg-muted rounded">
+                                <FileText className="h-6 w-6" />
                                 <span className="text-xs">{file.name}</span>
                               </div>
                             )}
@@ -282,8 +416,59 @@ const Chat = () => {
                       </div>
                     )}
                   </div>
+                  
+                  {msg.role === "assistant" && (
+                    <div className="flex items-center gap-1 px-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleCopyMessage(msg.content)}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={handleRegenerateResponse}
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={handleLikeMessage}
+                      >
+                        <ThumbsUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={handleDislikeMessage}
+                      >
+                        <ThumbsDown className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setReportDialogOpen(true)}
+                      >
+                        <Flag className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
+              {isAIResponding && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Thinking...</span>
+                </div>
+              )}
             </div>
           )}
         </ScrollArea>
@@ -365,8 +550,9 @@ const Chat = () => {
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
                 placeholder="Ask Beja"
-                className="flex-1 rounded-3xl border-none bg-background resize-none min-h-[44px] max-h-32"
+                className="flex-1 rounded-3xl border border-border bg-muted/30 resize-none min-h-[44px] max-h-32"
                 rows={1}
+                disabled={isAIResponding}
               />
 
               <Button
@@ -382,9 +568,9 @@ const Chat = () => {
         </div>
       </div>
 
-      {/* Upload Menu Dialog */}
-      <Dialog open={uploadMenuOpen} onOpenChange={setUploadMenuOpen}>
-        <DialogContent className="sm:max-w-[280px] rounded-3xl">
+      {/* Upload Menu Sheet */}
+      <Sheet open={uploadMenuOpen} onOpenChange={setUploadMenuOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl">
           <div className="space-y-1">
             <button
               onClick={() => handleFileUpload("image")}
@@ -428,8 +614,8 @@ const Chat = () => {
               <span className="text-sm">Deep Think</span>
             </button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       {/* Top Menu Dialog */}
       <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
@@ -510,7 +696,7 @@ const Chat = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[280px] rounded-3xl">
+        <DialogContent className="sm:max-w-[320px] rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-base">Delete Conversation?</DialogTitle>
           </DialogHeader>
@@ -530,7 +716,7 @@ const Chat = () => {
 
       {/* Edit Name Dialog */}
       <Dialog open={editNameDialogOpen} onOpenChange={setEditNameDialogOpen}>
-        <DialogContent className="sm:max-w-[280px] rounded-3xl">
+        <DialogContent className="sm:max-w-[320px] rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-base">Edit Chat Name</DialogTitle>
           </DialogHeader>
@@ -564,6 +750,19 @@ const Chat = () => {
           className="hidden"
           onChange={(e) => handleFileChange(e, "file")}
         />
+
+        {/* Enlarged Image Dialog */}
+        <Dialog open={!!enlargedImage} onOpenChange={() => setEnlargedImage(null)}>
+          <DialogContent className="max-w-4xl p-0 bg-background/95 backdrop-blur">
+            {enlargedImage && (
+              <img
+                src={enlargedImage}
+                alt="Enlarged view"
+                className="w-full h-auto rounded-lg"
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
