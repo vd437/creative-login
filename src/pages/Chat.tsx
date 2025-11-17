@@ -155,19 +155,33 @@ const Chat = () => {
           mimeType: f.mimeType
         }));
 
-      const { data, error } = await supabase.functions.invoke('chat-ai', {
-        body: {
-          messages: [{ role: "user", content: userMessage }],
-          searchMode,
-          deepThinkMode,
-          images: images.length > 0 ? images : undefined
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-ai`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            messages: [{ role: "user", content: userMessage }],
+            searchMode,
+            deepThinkMode,
+            images: images.length > 0 ? images : undefined
+          })
         }
-      });
+      );
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      if (!response.body) {
+        throw new Error('No response body');
+      }
 
       // Parse streaming response
-      const reader = data.getReader();
+      const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let aiMessage = "";
       let aiMessageId = Date.now().toString();
@@ -622,8 +636,25 @@ const Chat = () => {
         <DialogContent className="sm:max-w-[280px] rounded-3xl">
           <div className="space-y-1">
             <button
-              disabled
-              className="w-full flex items-center gap-3 p-3 rounded-xl text-muted-foreground cursor-not-allowed opacity-50"
+              disabled={!hasMessages}
+              onClick={() => {
+                if (hasMessages) {
+                  const newConv: Conversation = {
+                    id: Date.now().toString(),
+                    name: "New Chat",
+                    pinned: false,
+                    messages: []
+                  };
+                  setConversations(prev => [...prev, newConv]);
+                  setCurrentConversationId(newConv.id);
+                  setMenuOpen(false);
+                }
+              }}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                !hasMessages 
+                  ? 'text-muted-foreground cursor-not-allowed opacity-50' 
+                  : 'hover:bg-accent cursor-pointer'
+              }`}
             >
               <MessageSquare className="h-4 w-4" />
               <span className="text-sm">New Chat</span>
